@@ -11,7 +11,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Loading the file and removing null characters
 
-```{r file load}
+```{r file load, cache=TRUE}
 twittConn <- file("./final/en_US/en_US.twitter.txt","r")
 readLines(twittConn,n=167154)
 twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
@@ -20,7 +20,7 @@ close(twittConn)
 
 ## Function to return words and isolated numbers from a line
 
-```{r line words}
+```{r line words, cache=TRUE}
 lineWords <- function(line){
     #replace all punctuation with space
     line <- gsub("[[:punct:]]"," ",line)
@@ -35,3 +35,33 @@ lineWords <- function(line){
 }
 ```
 
+## Count number of each word
+```{r word count, cache=TRUE}
+# an environment is the most efficient hash table implementation in R
+occur <- new.env()
+for (i in 1:length(twittLines)){
+    #get the list of words in a line
+    words <- lineWords(twittLines[i])$words
+    for(word in words){
+        word <- tolower(word)
+        #if this is the first occurence of the word, add it to the environment
+        if(is.null(occur[[word]])){
+            occur[[word]] <- 1
+        #else increment the number of times the word is seen
+        }else{
+            occur[[word]] <- occur[[word]] +1
+        }
+    }
+}
+```
+
+## Frequency display
+
+```{r frequency display}
+wordOccDf <- as.data.frame(unlist(as.list(occur)))
+library(data.table)
+setDT(wordOccDf,keep.rownames = TRUE)
+colnames(wordOccDf)<-c("word","occ")
+wordOccDf <- wordOccDf[order(-occ),]
+wordOccDf
+```
