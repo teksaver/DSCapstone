@@ -1,0 +1,37 @@
+---
+title: "Exploratory Data Analysis"
+author: "Sylvain Tenier"
+date: "5 juin 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loading the file and removing null characters
+
+```{r file load}
+twittConn <- file("./final/en_US/en_US.twitter.txt","r")
+readLines(twittConn,n=167154)
+twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
+close(twittConn)
+```
+
+## Function to return words and isolated numbers from a line
+
+```{r line words}
+lineWords <- function(line){
+    #replace all punctuation with space
+    line <- gsub("[[:punct:]]"," ",line)
+    #split by space
+    tokens <- strsplit(line, split="[[:space:]]")[[1]]
+    #find words with at least 2 letters
+    isWord <- sapply(tokens,function(tok){grepl("^[[:alpha:]][[:alpha:]]+$",tok)})
+    #find numbers
+    isNumber <- sapply(tokens,function(tok){grepl("^[[:digit:]]+$",tok)})
+    #return list of words and of numbers
+    return(list(words=tokens[isWord], numbers=tokens[isNumber]))
+}
+```
+
