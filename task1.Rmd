@@ -13,7 +13,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r file load, cache=TRUE}
 twittConn <- file("./final/en_US/en_US.twitter.txt","r")
-readLines(twittConn,n=167154)
 twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
 close(twittConn)
 ```
@@ -57,7 +56,7 @@ for (i in 1:length(twittLines)){
 
 ## Frequency display
 
-```{r frequency display}
+```{r frequency display, cache=TRUE}
 wordOccDf <- as.data.frame(unlist(as.list(occur)))
 library(data.table)
 setDT(wordOccDf,keep.rownames = TRUE)
