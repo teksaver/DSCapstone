@@ -26,7 +26,8 @@ lineWords <- function(line){
     #split by space
     tokens <- strsplit(line, split="[[:space:]]")[[1]]
     #find words with at least 2 letters
-    isWord <- sapply(tokens,function(tok){grepl("^[[:alpha:]][[:alpha:]]+$",tok)})
+    #isWord <- sapply(tokens,function(tok){grepl("^[[:alpha:]][[:alpha:]]+$",tok)})
+    isWord <- sapply(tokens,function(tok){grepl("^[[:alpha:]]+$",tok)})
     #find numbers
     isNumber <- sapply(tokens,function(tok){grepl("^[[:digit:]]+$",tok)})
     #return list of words and of numbers
