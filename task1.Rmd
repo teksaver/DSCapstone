@@ -12,7 +12,11 @@ knitr::opts_chunk$set(echo = TRUE)
 ## Loading the file and removing null characters
 
 ```{r file load, cache=TRUE}
+blogsConn <- file("./final/en_US/en_US.blogs.txt","r")
+newsConn <- file("./final/en_US/en_US.news.txt","r")
 twittConn <- file("./final/en_US/en_US.twitter.txt","r")
+blogsLines <- readLines(blogsConn,n=-1,skipNul = TRUE)
+newsLines <- readLines(newsConn,n=-1,skipNul = TRUE)
 twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
 close(twittConn)
 ```
@@ -35,33 +39,46 @@ lineWords <- function(line){
 }
 ```
 
-## Count number of each word
+## Function to count number of each word
 ```{r word count, cache=TRUE}
-# an environment is the most efficient hash table implementation in R
-occur <- new.env()
-for (i in 1:length(twittLines)){
-    #get the list of words in a line
-    words <- lineWords(twittLines[i])$words
-    for(word in words){
-        word <- tolower(word)
-        #if this is the first occurence of the word, add it to the environment
-        if(is.null(occur[[word]])){
-            occur[[word]] <- 1
-        #else increment the number of times the word is seen
-        }else{
-            occur[[word]] <- occur[[word]] +1
+library(data.table)
+occWords <- function(lines){
+    # an environment is the most efficient hash table implementation in R
+    occur <- new.env()
+    for (i in 1:1000){#length(lines)){
+        #get the list of words in a line
+        words <- lineWords(lines[i])$words
+        for(word in words){
+            word <- tolower(word)
+            #if this is the first occurence of the word, add it to the environment
+            if(is.null(occur[[word]])){
+                occur[[word]] <- 1
+            #else increment the number of times the word is seen
+            }else{
+                occur[[word]] <- occur[[word]] +1
+            }
         }
     }
+    wordOccDf <- as.data.frame(unlist(as.list(occur)))
+    setDT(wordOccDf,keep.rownames = TRUE)
+    colnames(wordOccDf)<-c("word","occ")
+    wordOccDf <- wordOccDf[order(-occ),]
 }
 ```
 
-## Frequency display
+## Frequency calculation
 
 ```{r frequency display, cache=TRUE}
-wordOccDf <- as.data.frame(unlist(as.list(occur)))
-library(data.table)
-setDT(wordOccDf,keep.rownames = TRUE)
-colnames(wordOccDf)<-c("word","occ")
-wordOccDf <- wordOccDf[order(-occ),]
-wordOccDf
+library(knitr)
+blogsWords <- occWords(blogsLines)
+newsWords <- occWords(newsLines)
+twittWords <- occWords(twittLines)
+```
+
+## Top 10 table for each file
+
+```{r top 10}
+kable(head(blogsWords,n=10))
+kable(head(newsWords,n=10))
+kable(head(twittWords,n=10))
 ```
