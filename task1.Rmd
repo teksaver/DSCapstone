@@ -47,7 +47,7 @@ library(data.table)
 occWords <- function(lines){
     # an environment is the most efficient hash table implementation in R
     occur <- new.env()
-    for (i in 1:10000){#length(lines)){
+    for (i in 1:length(lines)){
         #get the list of words in a line
         words <- lineWords(lines[i])$words
         for(word in words){
@@ -89,13 +89,17 @@ kable(head(twittWords,n=10))
 ```{r histogram}
 library(ggplot2)
 ggplot(blogsWords, aes(occ)) +
-    geom_histogram(bins = 30) + 
-    scale_x_log10()
-ggplot(newsWords, aes(occ)) +
-    geom_histogram(bins = 20) + 
-    scale_x_log10()
-ggplot(twittWords, aes(occ)) +
-    geom_histogram(bins = 10) + 
+    geom_histogram(bins = 30, pad=TRUE) + 
+    scale_y_log10()+
     scale_x_log10()
 
+ggplot(newsWords, aes(occ)) +
+    geom_histogram(bins = 20) + 
+    scale_y_log10()+
+    scale_x_log10()
+
+ggplot(twittWords, aes(occ)) +
+    geom_histogram(bins = 10) + 
+    scale_y_log10()+
+    scale_x_log10()
 ```
