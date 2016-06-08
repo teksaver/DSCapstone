@@ -18,6 +18,8 @@ twittConn <- file("./final/en_US/en_US.twitter.txt","r")
 blogsLines <- readLines(blogsConn,n=-1,skipNul = TRUE)
 newsLines <- readLines(newsConn,n=-1,skipNul = TRUE)
 twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
+close(blogsConn)
+close(newsConn)
 close(twittConn)
 ```
 
@@ -45,7 +47,7 @@ library(data.table)
 occWords <- function(lines){
     # an environment is the most efficient hash table implementation in R
     occur <- new.env()
-    for (i in 1:1000){#length(lines)){
+    for (i in 1:10000){#length(lines)){
         #get the list of words in a line
         words <- lineWords(lines[i])$words
         for(word in words){
@@ -69,7 +71,6 @@ occWords <- function(lines){
 ## Frequency calculation
 
 ```{r frequency display, cache=TRUE}
-library(knitr)
 blogsWords <- occWords(blogsLines)
 newsWords <- occWords(newsLines)
 twittWords <- occWords(twittLines)
@@ -78,7 +79,23 @@ twittWords <- occWords(twittLines)
 ## Top 10 table for each file
 
 ```{r top 10}
+library(knitr)
 kable(head(blogsWords,n=10))
 kable(head(newsWords,n=10))
 kable(head(twittWords,n=10))
+```
+
+## Histogram plot
+```{r histogram}
+library(ggplot2)
+ggplot(blogsWords, aes(occ)) +
+    geom_histogram(bins = 30) + 
+    scale_x_log10()
+ggplot(newsWords, aes(occ)) +
+    geom_histogram(bins = 20) + 
+    scale_x_log10()
+ggplot(twittWords, aes(occ)) +
+    geom_histogram(bins = 10) + 
+    scale_x_log10()
+
 ```
