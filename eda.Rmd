@@ -11,9 +11,11 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Executive summary
 
-We analyse 3 files containing text in English from blogs, news and twitter. We first summarize the main characteristics of each file. We then use "vanilla" R tools to detect numbers, profanity and tokenize each line of the corpus. Using the tokenized version, we show that the population respects the power law distribution. Finally, we present our plan and tools for a word prediction appication from this corpus.
+We analyse 3 files containing text in English from blogs, news and Twitter. We first summarize the main characteristics of each file. We then use "vanilla" R tools to detect numbers, profanity and tokenize each line of the corpus. Using the tokenized version, we show that the population respects the power law distribution. Finally, we present our plan and tools for a word prediction appication from this corpus.
 
 # Main characteristics
+
+## Number of lines for each data set
 
 We first check whether the dataset can fit in memory. Using the `readLines` function from a `connection` removes any *null characters* warnings and loads all the data without trouble.
 
@@ -28,7 +30,6 @@ close(blogsConn)
 close(newsConn)
 close(twittConn)
 ```
-
 
 During the analysis, tests are performed using a subset of the data using the `sample` function such as
 ```{r eval=FALSE}
@@ -47,6 +48,26 @@ summDf <-rbind(summDf,data.frame(source="Twitter",length=summTwitt[1],class=summ
 kable(summDf)
 ```
 
+## Distribution of number of characters per line
+
+We plot a histogram for the distribution of number of characters per line for each kind of data. We can see that blog and news data follow a normal distribution, while Twitter's 160 chararacters-per-message limit causes a strong bias towards that limit.
+
+```{r char distribution, cache=TRUE}
+suppressPackageStartupMessages(library(ggplot2))
+charCountDF <- data.frame(nbChar=integer(),source=factor(levels=c("Blog","News","Twitter")))
+charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(blogsLines,nchar),source="Blog"))
+charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(newsLines,nchar),source="News"))
+charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(twittLines,nchar),source="Twitter"))
+ggplot(data=charCountDF,aes(nbChar))+
+    facet_grid(. ~ source)+
+    geom_histogram()+
+    scale_x_log10() +
+    labs(x="Number of characters",title="Number of characters per line")
+```
+
+# Content analysis
+
+We now tokenize the content to analyse the distribution of words for each kind of data.
 
 # Plans for the Shiny prediction app
 
@@ -56,6 +77,5 @@ The data used for this analysis was small enough to fit in memory. If needed for
 
 - Subsetting strategies :as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
 - Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and profanities as <profanity>.
-We present a strategy to deal with different sizes
 
 
