@@ -1,0 +1,61 @@
+---
+title: "EDA"
+author: "Sylvain Tenier"
+date: "10 juin 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Executive summary
+
+We analyse 3 files containing text in English from blogs, news and twitter. We first summarize the main characteristics of each file. We then use "vanilla" R tools to detect numbers, profanity and tokenize each line of the corpus. Using the tokenized version, we show that the population respects the power law distribution. Finally, we present our plan and tools for a word prediction appication from this corpus.
+
+# Main characteristics
+
+We first check whether the dataset can fit in memory. Using the `readLines` function from a `connection` removes any *null characters* warnings and loads all the data without trouble.
+
+```{r file load, cache=TRUE}
+blogsConn <- file("./final/en_US/en_US.blogs.txt","r")
+newsConn <- file("./final/en_US/en_US.news.txt","r")
+twittConn <- file("./final/en_US/en_US.twitter.txt","r")
+blogsLines <- readLines(blogsConn,n=-1,skipNul = TRUE)
+newsLines <- readLines(newsConn,n=-1,skipNul = TRUE)
+twittLines <- readLines(twittConn,n=-1,skipNul = TRUE)
+close(blogsConn)
+close(newsConn)
+close(twittConn)
+```
+
+
+During the analysis, tests are performed using a subset of the data using the `sample` function such as
+```{r eval=FALSE}
+blogsLines[sample(1:length(blogsLines)/10, 1000, replace=FALSE)]
+```
+The results presented in this report are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
+
+```{r summary}
+library(knitr)
+summBlog <- as.character(summary(blogsLines))
+summNews <- as.character(summary(newsLines))
+summTwitt <- as.character(summary(twittLines))
+summDf <- data.frame(source="Blog",length=summBlog[1],class=summBlog[2])
+summDf <-rbind(summDf,data.frame(source="News",length=summNews[1],class=summNews[2]))
+summDf <-rbind(summDf,data.frame(source="Twitter",length=summTwitt[1],class=summTwitt[2]))
+kable(summDf)
+```
+
+
+# Plans for the Shiny prediction app
+
+## Dealing with limited resources
+
+The data used for this analysis was small enough to fit in memory. If needed for computational reasons, specially given the limited resources at shiny.io, we will use the following strategies:
+
+- Subsetting strategies :as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
+- Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and profanities as <profanity>.
+We present a strategy to deal with different sizes
+
+
