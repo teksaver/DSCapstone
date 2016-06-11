@@ -42,9 +42,9 @@ library(knitr)
 summBlog <- as.character(summary(blogsLines))
 summNews <- as.character(summary(newsLines))
 summTwitt <- as.character(summary(twittLines))
-summDf <- data.frame(source="Blog",characters=summBlog[1],class=summBlog[2])
-summDf <-rbind(summDf,data.frame(source="News",characters=summNews[1],class=summNews[2]))
-summDf <-rbind(summDf,data.frame(source="Twitter",characters=summTwitt[1],class=summTwitt[2]))
+summDf <- data.frame(source="Blog",lines=summBlog[1],class=summBlog[2])
+summDf <-rbind(summDf,data.frame(source="News",lines=summNews[1],class=summNews[2]))
+summDf <-rbind(summDf,data.frame(source="Twitter",lines=summTwitt[1],class=summTwitt[2]))
 kable(summDf)
 ```
 
@@ -188,7 +188,7 @@ This first step exploratory analysis gives us a good idea of the specificity of 
 The data used for this analysis was small enough to fit in memory. If needed for computational reasons, specially given the limited resources at shiny.io, we will use the following strategies:
 
 - Subsetting strategies: as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
-- Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and profanities as <profanity>.
+- Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and bad words as <profanity>.
 - backoff strategy: the more words are used to generate the prediction, the better the prediction. However since the learning corpus and memory are constrained, we will backoff to less words (up to using only one word) in cases where the particular phrase has not been seen enough to be kept into the model.
 
 # Conclusion
