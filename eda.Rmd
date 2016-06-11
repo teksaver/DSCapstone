@@ -46,6 +46,7 @@ summDf <- data.frame(source="Blog",lines=summBlog[1],class=summBlog[2])
 summDf <-rbind(summDf,data.frame(source="News",lines=summNews[1],class=summNews[2]))
 summDf <-rbind(summDf,data.frame(source="Twitter",lines=summTwitt[1],class=summTwitt[2]))
 kable(summDf)
+rm(summDf)
 ```
 
 ## Distribution of number of characters per line
@@ -66,6 +67,7 @@ ggplot(data=charCountDF,aes(nbChar))+
     geom_histogram(bins=30)+
     scale_x_log10() +
     labs(x="Number of characters",title="Number of characters per line")
+rm(charCountDF)
 ```
 
 # Content analysis
@@ -115,11 +117,14 @@ library("data.table")
 ngramsOcc <- function(lines){
     # an environment is the most efficient hash table implementation in R
     occur <- new.env()
-    occurTwo <- new.env() #for 2grams
+    occurTwo <- new.env() #for 2-grams
+    nbWords <- 0 #word count
     for (line in lines){
         #get the list of words in a line
         words <- tokenize(line)
         for(i in 1:length(words)){
+            print(i)
+            nbWords <- nbWords +1
             #if this is the first occurence of the word, add it to the environment
             if(is.null(occur[[words[i]]])){
                 occur[[words[i]]] <- 1
@@ -129,40 +134,54 @@ ngramsOcc <- function(lines){
             }
             # same procedure for 2grams
             if(i>1){#do nothing for the first token
-                twoGram <- paste(words[i],words[i-1],sep=" ")
-                if(is.null(occurTwo[[words[i]]])){
-                    occurTwo[[words[i]]] <- 1
+                print(i)
+                twoGram <- paste(words[i-1],words[i],sep="_")
+                if(is.null(occurTwo[[twoGram]])){
+                    occurTwo[[twoGram]] <- 1
                     #else increment the number of times the word is seen
                 }else{
-                    occurTwo[[words[i]]] <- occurTwo[[words[i]]] +1
+                    occurTwo[[twoGram]] <- occurTwo[[twoGram]] +1
                 }
             }
             
         }
     }
+    #create dataframes and return list with 1gram, 2gram and word count
     wordOccDf <- as.data.frame(unlist(as.list(occur)))
-    twoGramOccDf <- as.data.frame(unlist(as.list(occurTwo)))
+    twoGramDf <- as.data.frame(unlist(as.list(occurTwo)))
     setDT(wordOccDf,keep.rownames = TRUE)
     setDT(twoGramDf,keep.rownames = TRUE)
     colnames(wordOccDf)<-c("word","occ")
     colnames(twoGramDf)<-c("2gram","occ")
     wordOccDf <- wordOccDf[order(-occ),]
     twoGramDf <- twoGramDf[order(-occ),]
-    return(list(oneGram=wordOccDf,twoGram=twoGramDf))
-
+    return(list(oneGram=wordOccDf,twoGram=twoGramDf, nbWords=nbWords))
 }
 ```
 
 Using the function, we launch the calculation for each dataset. 
 
-```{r ngram calculation, cache=TRUE}
-blogsSubset <- blogsLines[sample(1:length(blogsLines)/10, 10000, replace=FALSE)]
-newsSubset <- blogsLines[sample(1:length(newsLines)/10, 10000, replace=FALSE)]
-twittSubset <- blogsLines[sample(1:length(twittLines)/10, 10000, replace=FALSE)]
-blogsWords <- ngramsOcc(blogsSubset)$oneGram
-newsWords <- ngramsOcc(newsSubset)$oneGram
-twittWords <- ngramsOcc(twittSubset)$oneGram
-blogsTwoGram <- ngramsOcc(blogsSubset)$twoGram
+```{r ngrams calculation, cache=TRUE}
+blogsSubset <- blogsLines[sample(1:length(blogsLines)/10, 1000, replace=FALSE)]
+newsSubset <- blogsLines[sample(1:length(newsLines)/10, 1000, replace=FALSE)]
+twittSubset <- blogsLines[sample(1:length(twittLines)/10, 1000, replace=FALSE)]
+blogsNGrams <- ngramsOcc(blogsSubset)
+newsNGrams <- ngramsOcc(newsSubset)
+twittNGrams <- ngramsOcc(twittSubset)
+```
+
+## 1-gram(words) analysis
+
+```{r ngrams analysis}
+blogsWords <- blogsNGrams$oneGram
+newsWords <- newsNGrams$oneGram
+twittWords <- twittNGrams$oneGram
+```
+
+## 2-gram analysis
+
+```{r 2gram analysis}
+blogsTwoGram <- blogsNGrams$twoGram
 ```
 
 Finally, we display the top results and generate the histogram using a log scale.
@@ -173,7 +192,7 @@ kable(head(blogsWords,n=10))
 kable(head(newsWords,n=10))
 kable(head(twittWords,n=10))
 kable(head(blogsTwoGram,n=10))
-
+print(blogsTwoGram$nbWords)
 ```
 
 The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
