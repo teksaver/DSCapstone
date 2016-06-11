@@ -76,7 +76,7 @@ rm(charCountDF)
 
 We first need to construct a function to generate a regular expression for profanity detection. We use the textfile provided at https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en.
 
-```{r profanity regexp}
+```{r profanity regexp, cache=TRUE}
 prof <- scan("naughty.txt", what="", sep="\n")
 profExpr <- " ("
 for (item in prof){
@@ -166,12 +166,12 @@ Using the function, we launch the calculation for each dataset.
 
 ```{r ngrams calculation, cache=TRUE}
 set.seed(12345)
-blogsSubset <- blogsLines[sample(1:length(blogsLines), 100, replace=FALSE)]
-newsSubset <- blogsLines[sample(1:length(newsLines), 100, replace=FALSE)]
-twittSubset <- blogsLines[sample(1:length(twittLines), 100, replace=FALSE)]
-blogsNGrams <- ngramsOcc(blogsSubset)
-newsNGrams <- ngramsOcc(newsSubset)
-twittNGrams <- ngramsOcc(twittSubset)
+#blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/50, replace=FALSE)]
+#newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/50, replace=FALSE)]
+#twittSubset <- blogsLines[sample(1:length(twittLines), length(twittLines)/50, replace=FALSE)]
+blogsNGrams <- ngramsOcc(blogsLines)#Subset)
+newsNGrams <- ngramsOcc(newsLines)#Subset)
+twittNGrams <- ngramsOcc(twittLines)#Subset)
 rm(blogsLines)
 rm(newsLines)
 rm(twittLines)
