@@ -31,20 +31,20 @@ close(newsConn)
 close(twittConn)
 ```
 
-During the analysis, tests are performed using a subset of the data using the `sample` function such as
+During the analysis, tests were performed using a subset of the data using the `sample` function such as
 ```{r eval=FALSE}
 blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
 ```
-The results presented in this report are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
+However, the results presented here are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
 
 ```{r summary, cache=TRUE}
 library(knitr)
 summBlog <- as.character(summary(blogsLines))
 summNews <- as.character(summary(newsLines))
 summTwitt <- as.character(summary(twittLines))
-summDf <- data.frame(source="Blog",length=summBlog[1],class=summBlog[2])
-summDf <-rbind(summDf,data.frame(source="News",length=summNews[1],class=summNews[2]))
-summDf <-rbind(summDf,data.frame(source="Twitter",length=summTwitt[1],class=summTwitt[2]))
+summDf <- data.frame(source="Blog",characters=summBlog[1],class=summBlog[2])
+summDf <-rbind(summDf,data.frame(source="News",characters=summNews[1],class=summNews[2]))
+summDf <-rbind(summDf,data.frame(source="Twitter",characters=summTwitt[1],class=summTwitt[2]))
 kable(summDf)
 ```
 
@@ -52,22 +52,25 @@ kable(summDf)
 
 We plot a histogram for the distribution of number of characters per line for each kind of data. We can see that blog and news data follow a normal distribution, while Twitter's 160 chararacters-per-message limit causes a strong bias towards that limit.
 
-```{r char distribution, cache=TRUE}
-suppressPackageStartupMessages(library(ggplot2))
+```{r char distribution calculation, cache=TRUE}
 charCountDF <- data.frame(nbChar=integer(),source=factor(levels=c("Blog","News","Twitter")))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(blogsLines,nchar),source="Blog"))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(newsLines,nchar),source="News"))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(twittLines,nchar),source="Twitter"))
+```
+
+```{r char distribution histogram, cache=TRUE}
+suppressPackageStartupMessages(library(ggplot2))
 ggplot(data=charCountDF,aes(nbChar))+
     facet_grid(. ~ source)+
-    geom_histogram()+
+    geom_histogram(bins=30)+
     scale_x_log10() +
     labs(x="Number of characters",title="Number of characters per line")
 ```
 
 # Content analysis
 
-We first need to construct a function to generate a regular expression for profanity detection.
+We first need to construct a function to generate a regular expression for profanity detection. We use the textfile provided at https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en.
 
 ```{r profanity regexp}
 prof <- scan("naughty.txt", what="", sep="\n")
@@ -78,14 +81,21 @@ for (item in prof){
 profExpr <- paste0(profExpr,")(s|ing|ed)* ",sep="",collapse = NULL)
 ```
 
-We now tokenize the content to analyse the distribution of words for each kind of data.
+We now create a `tokenize` function that :
+
+- removes all punctuation,
+- put all words in lowercase,
+- creates a generic `<number>` token for each number
+- substitutes bad words into a `<profanity>` token
+- removes extra whitespace
+- splits all words and generic tokens by whitespace
 
 ```{r tokenizer function, cache=TRUE}
 tokenize <- function(line){
-    #replace all punctuation with space
+    #substitute all punctuation with space
     line <- gsub("[[:punct:]]"," ",line)
-    #merge multiple spaces
-    line <- gsub("\\s+", " ",line)
+    #set all characters in lower case
+    line <- tolower(line)
     #generalize numbers with <number> token
     line <- gsub(" [[:digit:]]+ "," <number> ",line)
     #replace profanity with <profanity>
@@ -101,6 +111,7 @@ tokenize <- function(line){
 We then create a function to calculate the occurences for each word. The ngramsOcc function uses a R environment to benefit from an efficient key-value (hash table) data structure.
 
 ```{r ngrams function, cache=TRUE}
+library("data.table")
 ngramsOcc <- function(lines){
     # an environment is the most efficient hash table implementation in R
     occur <- new.env()
@@ -108,7 +119,6 @@ ngramsOcc <- function(lines){
         #get the list of words in a line
         words <- tokenize(lines[i])
         for(word in words){
-            word <- tolower(word)
             #if this is the first occurence of the word, add it to the environment
             if(is.null(occur[[word]])){
                 occur[[word]] <- 1
@@ -137,7 +147,7 @@ newsWords <- ngramsOcc(newsSubset)
 twittWords <- ngramsOcc(twittSubset)
 ```
 
-Finally, we display the top results and generate the histogram using a log scale. 
+Finally, we display the top results and generate the histogram using a log scale.
 
 ```{r top 10}
 library(knitr)
@@ -145,6 +155,8 @@ kable(head(blogsWords,n=10))
 kable(head(newsWords,n=10))
 kable(head(twittWords,n=10))
 ```
+
+The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
 
 ```{r histogram}
 library(ggplot2)
@@ -167,11 +179,20 @@ ggplot(twittWords, aes(occ)) +
 
 # Plans for the Shiny prediction app
 
+## Using NLP tools
+
+This first step exploratory analysis gives us a good idea of the specificity of each dataset.For the final application, we will use NLP tools such as the tm package to perform sentence segmentation inside each line. We will remove stopwords but perform grammatical segmentation to provide predictions according to the proper construction of a sentence.
+
 ## Dealing with limited resources
 
 The data used for this analysis was small enough to fit in memory. If needed for computational reasons, specially given the limited resources at shiny.io, we will use the following strategies:
 
-- Subsetting strategies :as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
+- Subsetting strategies: as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
 - Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and profanities as <profanity>.
+- backoff strategy: the more words are used to generate the prediction, the better the prediction. However since the learning corpus and memory are constrained, we will backoff to less words (up to using only one word) in cases where the particular phrase has not been seen enough to be kept into the model.
+
+# Conclusion
+
+Thie exploratory analysis has enabled us to understand better the corpus and enabled us to setup a strategy for the final app. The next weeks will be used to understand how NLP tools can help us to create the smallest model that can fit in shiny.io's constraint and still provide a great prediction for the user.
 
 
