@@ -2,7 +2,9 @@
 title: "EDA"
 author: "Sylvain Tenier"
 date: "10 juin 2016"
-output: html_document
+output: 
+    html_document:
+      keep_md: true
 ---
 
 ```{r setup, include=FALSE}
@@ -87,8 +89,8 @@ We now create a `tokenize` function that :
 
 - removes all punctuation,
 - put all words in lowercase,
-- creates a generic `<number>` token for each number
-- substitutes bad words into a `<profanity>` token
+- creates a generic `.number.` token for each number
+- substitutes bad words into a `.profanity.` token
 - removes extra whitespace
 - splits all words and generic tokens by whitespace
 
@@ -99,9 +101,9 @@ tokenize <- function(line){
     #set all characters in lower case
     line <- tolower(line)
     #generalize numbers with <number> token
-    line <- gsub(" [[:digit:]]+ "," <number> ",line)
-    #replace profanity with <profanity>
-    line <- gsub(profExpr," <profanity> ",line)
+    line <- gsub(" [[:digit:]]+ "," .number. ",line)
+    #replace profanity with .profanity.
+    line <- gsub(profExpr," .profanity. ",line)
     #remove leading and trailing space (R > 3.2)
     line <- trimws(line, which="both")
     #split by space
@@ -123,7 +125,9 @@ ngramsOcc <- function(lines){
         #get the list of words in a line
         words <- tokenize(line)
         for(i in 1:length(words)){
-            print(i)
+            if(grepl(" ",words[i])==TRUE){
+                print(line)
+            }
             nbWords <- nbWords +1
             #if this is the first occurence of the word, add it to the environment
             if(is.null(occur[[words[i]]])){
@@ -134,7 +138,6 @@ ngramsOcc <- function(lines){
             }
             # same procedure for 2grams
             if(i>1){#do nothing for the first token
-                print(i)
                 twoGram <- paste(words[i-1],words[i],sep="_")
                 if(is.null(occurTwo[[twoGram]])){
                     occurTwo[[twoGram]] <- 1
@@ -162,57 +165,56 @@ ngramsOcc <- function(lines){
 Using the function, we launch the calculation for each dataset. 
 
 ```{r ngrams calculation, cache=TRUE}
-blogsSubset <- blogsLines[sample(1:length(blogsLines), 100000, replace=FALSE)]
-newsSubset <- blogsLines[sample(1:length(newsLines), 100000, replace=FALSE)]
-twittSubset <- blogsLines[sample(1:length(twittLines), 100000, replace=FALSE)]
+set.seed(12345)
+blogsSubset <- blogsLines[sample(1:length(blogsLines), 100, replace=FALSE)]
+newsSubset <- blogsLines[sample(1:length(newsLines), 100, replace=FALSE)]
+twittSubset <- blogsLines[sample(1:length(twittLines), 100, replace=FALSE)]
 blogsNGrams <- ngramsOcc(blogsSubset)
 newsNGrams <- ngramsOcc(newsSubset)
 twittNGrams <- ngramsOcc(twittSubset)
+rm(blogsLines)
+rm(newsLines)
+rm(twittLines)
 ```
 
 ## 1-gram(words) analysis
 
-```{r ngrams analysis}
-blogsWords <- blogsNGrams$oneGram
-newsWords <- newsNGrams$oneGram
-twittWords <- twittNGrams$oneGram
-```
-
-## 2-gram analysis
-
-```{r 2gram analysis}
-blogsTwoGram <- blogsNGrams$twoGram
-```
-
-Finally, we display the top results and generate the histogram using a log scale.
+We display the top results and generate the histogram using a log scale.
 
 ```{r top 10}
 library(knitr)
-kable(head(blogsWords,n=10))
-kable(head(newsWords,n=10))
-kable(head(twittWords,n=10))
-kable(head(blogsTwoGram,n=10))
-print(blogsTwoGram$nbWords)
+kable(head(blogsNGrams$oneGram,n=10))
+kable(head(newsNGrams$oneGram,n=10))
+kable(head(twittNGrams$oneGram,n=10))
+print(blogsNGrams$nbWords)
 ```
 
 The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
 
 ```{r histogram}
 library(ggplot2)
-ggplot(blogsWords, aes(occ)) +
+ggplot(blogsNGrams$oneGram, aes(occ)) +
     geom_histogram(bins = 30, pad=TRUE) + 
     scale_y_log10()+
     scale_x_log10()
 
-ggplot(newsWords, aes(occ)) +
+ggplot(newsNGrams$oneGram, aes(occ)) +
     geom_histogram(bins = 20) + 
     scale_y_log10()+
     scale_x_log10()
 
-ggplot(twittWords, aes(occ)) +
+ggplot(twittNGrams$oneGram, aes(occ)) +
     geom_histogram(bins = 10) + 
     scale_y_log10()+
     scale_x_log10()
+```
+
+## 2-gram analysis
+
+```{r 2gram analysis}
+kable(head(blogsNGrams$twoGram,n=10))
+kable(head(newsNGrams$twoGram,n=10))
+kable(head(twittNGrams$twoGram,n=10))
 ```
 
 
@@ -227,7 +229,7 @@ This first step exploratory analysis gives us a good idea of the specificity of 
 The data used for this analysis was small enough to fit in memory. If needed for computational reasons, specially given the limited resources at shiny.io, we will use the following strategies:
 
 - Subsetting strategies: as seen in the inference class of the specialization, since the lines follow a normal distribution (as shown in the first part of this analysis) we can take multiple subsamples of the data to get a good approximation of the results on the full dataset
-- Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as <rare> exactly like all numbers are factorized into <number> and bad words as <profanity>.
+- Reduction strategy: since the word occurence distribution follows a power law, we can use a small subest of the most-occuring words and still have a high coverage. Least common words can be factorized as `.rare.` exactly like all numbers are factorized into `.number.` and bad words as `.profanity.`.
 - backoff strategy: the more words are used to generate the prediction, the better the prediction. However since the learning corpus and memory are constrained, we will backoff to less words (up to using only one word) in cases where the particular phrase has not been seen enough to be kept into the model.
 
 # Conclusion
