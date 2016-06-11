@@ -37,7 +37,7 @@ blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
 ```
 The results presented in this report are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
 
-```{r summary}
+```{r summary, cache=TRUE}
 library(knitr)
 summBlog <- as.character(summary(blogsLines))
 summNews <- as.character(summary(newsLines))
@@ -90,11 +90,80 @@ tokenize <- function(line){
     line <- gsub(" [[:digit:]]+ "," <number> ",line)
     #replace profanity with <profanity>
     line <- gsub(profExpr," <profanity> ",line)
+    #remove leading and trailing space (R > 3.2)
+    line <- trimws(line, which="both")
     #split by space
-    tokens <- strsplit(line, split="[[:space:]]")[[1]]
+    tokens <- strsplit(line, split="\\s+")[[1]]
     return(tokens)
 }
 ```
+
+We then create a function to calculate the occurences for each word. The ngramsOcc function uses a R environment to benefit from an efficient key-value (hash table) data structure.
+
+```{r ngrams function, cache=TRUE}
+ngramsOcc <- function(lines){
+    # an environment is the most efficient hash table implementation in R
+    occur <- new.env()
+    for (i in 1:length(lines)){
+        #get the list of words in a line
+        words <- tokenize(lines[i])
+        for(word in words){
+            word <- tolower(word)
+            #if this is the first occurence of the word, add it to the environment
+            if(is.null(occur[[word]])){
+                occur[[word]] <- 1
+                #else increment the number of times the word is seen
+            }else{
+                occur[[word]] <- occur[[word]] +1
+            }
+            
+        }
+    }
+    wordOccDf <- as.data.frame(unlist(as.list(occur)))
+    setDT(wordOccDf,keep.rownames = TRUE)
+    colnames(wordOccDf)<-c("word","occ")
+    wordOccDf <- wordOccDf[order(-occ),]
+}
+```
+
+Using the function, we launch the calculation for each dataset. 
+
+```{r ngram calculation, cache=TRUE}
+blogsSubset <- blogsLines[sample(1:length(blogsLines)/10, 10000, replace=FALSE)]
+newsSubset <- blogsLines[sample(1:length(newsLines)/10, 10000, replace=FALSE)]
+twittSubset <- blogsLines[sample(1:length(twittLines)/10, 10000, replace=FALSE)]
+blogsWords <- ngramsOcc(blogsSubset)
+newsWords <- ngramsOcc(newsSubset)
+twittWords <- ngramsOcc(twittSubset)
+```
+
+Finally, we display the top results and generate the histogram using a log scale. 
+
+```{r top 10}
+library(knitr)
+kable(head(blogsWords,n=10))
+kable(head(newsWords,n=10))
+kable(head(twittWords,n=10))
+```
+
+```{r histogram}
+library(ggplot2)
+ggplot(blogsWords, aes(occ)) +
+    geom_histogram(bins = 30, pad=TRUE) + 
+    scale_y_log10()+
+    scale_x_log10()
+
+ggplot(newsWords, aes(occ)) +
+    geom_histogram(bins = 20) + 
+    scale_y_log10()+
+    scale_x_log10()
+
+ggplot(twittWords, aes(occ)) +
+    geom_histogram(bins = 10) + 
+    scale_y_log10()+
+    scale_x_log10()
+```
+
 
 # Plans for the Shiny prediction app
 
