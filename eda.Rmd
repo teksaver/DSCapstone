@@ -162,9 +162,9 @@ ngramsOcc <- function(lines){
 Using the function, we launch the calculation for each dataset. 
 
 ```{r ngrams calculation, cache=TRUE}
-blogsSubset <- blogsLines[sample(1:length(blogsLines)/10, 1000, replace=FALSE)]
-newsSubset <- blogsLines[sample(1:length(newsLines)/10, 1000, replace=FALSE)]
-twittSubset <- blogsLines[sample(1:length(twittLines)/10, 1000, replace=FALSE)]
+blogsSubset <- blogsLines[sample(1:length(blogsLines), 100000, replace=FALSE)]
+newsSubset <- blogsLines[sample(1:length(newsLines), 100000, replace=FALSE)]
+twittSubset <- blogsLines[sample(1:length(twittLines), 100000, replace=FALSE)]
 blogsNGrams <- ngramsOcc(blogsSubset)
 newsNGrams <- ngramsOcc(newsSubset)
 twittNGrams <- ngramsOcc(twittSubset)
