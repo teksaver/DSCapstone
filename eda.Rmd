@@ -67,14 +67,27 @@ ggplot(data=charCountDF,aes(nbChar))+
 
 # Content analysis
 
+We first need to construct a function to generate a regular expression for profanity detection.
+
+```{r profanity regexp}
+prof <- scan("naughty.txt", what="", sep="\n")
+profExpr <- " ("
+for (item in prof){
+    profExpr <- paste0(profExpr,item, sep = "|", collapse = NULL)
+}
+profExpr <- paste0(profExpr,")(s|ing|ed)* ",sep="",collapse = NULL)
+```
+
 We now tokenize the content to analyse the distribution of words for each kind of data.
 
 ```{r tokenizer function, cache=TRUE}
 tokenize <- function(line){
     #replace all punctuation with space
     line <- gsub("[[:punct:]]"," ",line)
+    #merge multiple spaces
+    line <- gsub("\\s+", " ",line)
     #generalize numbers with <number> token
-    line <- gsub(" [[:digit:]]+ ","<number>",line)
+    line <- gsub(" [[:digit:]]+ "," <number> ",line)
     #replace profanity with <profanity>
     line <- gsub(profExpr," <profanity> ",line)
     #split by space
