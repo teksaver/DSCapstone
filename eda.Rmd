@@ -33,7 +33,7 @@ close(twittConn)
 
 During the analysis, tests are performed using a subset of the data using the `sample` function such as
 ```{r eval=FALSE}
-blogsLines[sample(1:length(blogsLines)/10, 1000, replace=FALSE)]
+blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
 ```
 The results presented in this report are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
 
@@ -68,6 +68,20 @@ ggplot(data=charCountDF,aes(nbChar))+
 # Content analysis
 
 We now tokenize the content to analyse the distribution of words for each kind of data.
+
+```{r tokenizer function, cache=TRUE}
+tokenize <- function(line){
+    #replace all punctuation with space
+    line <- gsub("[[:punct:]]"," ",line)
+    #generalize numbers with <number> token
+    line <- gsub(" [[:digit:]]+ ","<number>",line)
+    #replace profanity with <profanity>
+    line <- gsub(profExpr," <profanity> ",line)
+    #split by space
+    tokens <- strsplit(line, split="[[:space:]]")[[1]]
+    return(tokens)
+}
+```
 
 # Plans for the Shiny prediction app
 
