@@ -1,7 +1,7 @@
 ---
-title: "EDA"
+title: "Data Science Specialization report 1: Exploratory Data Analysis"
 author: "Sylvain Tenier"
-date: "10 juin 2016"
+date: "June 12, 2016"
 output: 
     html_document:
       keep_md: true
@@ -13,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Executive summary
 
-We analyse 3 files containing text in English from blogs, news and Twitter. We first summarize the main characteristics of each file. We then use "vanilla" R tools to detect numbers, profanity and tokenize each line of the corpus. Using the tokenized version, we show that the population respects the power law distribution. Finally, we present our plan and tools for a word prediction appication from this corpus.
+We analyse 3 files containing text in English from blogs, news and Twitter. We first summarize the main characteristics of each file. We then use "vanilla" R tools to detect numbers, profanity and tokenize each line of the corpus. Using the tokenized version, we show that the population respects zipf's law distribution for 1 and 2-grams. We also demonstrate that relatively few words are necessary in 1-grams to account for the majority of occurences in a corpus, but that the proportion increases according to n in n-grams. Finally, we present our plan and tools for a word prediction appication from this corpus.
 
 # Main characteristics
 
@@ -166,55 +166,132 @@ Using the function, we launch the calculation for each dataset.
 
 ```{r ngrams calculation, cache=TRUE}
 set.seed(12345)
-#blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/50, replace=FALSE)]
-#newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/50, replace=FALSE)]
-#twittSubset <- blogsLines[sample(1:length(twittLines), length(twittLines)/50, replace=FALSE)]
-blogsNGrams <- ngramsOcc(blogsLines)#Subset)
-newsNGrams <- ngramsOcc(newsLines)#Subset)
-twittNGrams <- ngramsOcc(twittLines)#Subset)
+blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
+newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/10, replace=FALSE)]
+twittSubset <- blogsLines[sample(1:length(twittLines), length(twittLines)/10, replace=FALSE)]
+print(paste(Sys.time(),"Blogs calculation"))
+blogsNGrams <- ngramsOcc(blogsSubset)
+print(paste(Sys.time(),"News calculation"))
+newsNGrams <- ngramsOcc(newsSubset)
+print(paste(Sys.time(),"Twitter calculation"))
+twittNGrams <- ngramsOcc(twittSubset)
+print(paste(Sys.time(),"calculation done"))
 rm(blogsLines)
 rm(newsLines)
 rm(twittLines)
 ```
 
-## 1-gram(words) analysis
+## 1-gram (words) analysis
 
-We display the top results and generate the histogram using a log scale.
+The 1-gram occurence calculation provide the following results:
 
-```{r top 10}
-library(knitr)
-kable(head(blogsNGrams$oneGram,n=10))
-kable(head(newsNGrams$oneGram,n=10))
-kable(head(twittNGrams$oneGram,n=10))
-print(blogsNGrams$nbWords)
+- In the *Blogs* dataset, there are `r as.integer(blogsNGrams$nbWords)` occurences for `r nrow(blogsNGrams$oneGram)` distinct words.
+- In the *News* dataset, there are `r as.integer(newsNGrams$nbWords)` occurences for `r nrow(newsNGrams$oneGram)` distinct words.
+- In the *Twitter* dataset, there are `r as.integer(twittNGrams$nbWords)` occurences for `r nrow(twittNGrams$oneGram)` distinct words.
+
+We first generate and display and histogram of 1-grams (words) occurences. The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
+
+```{r 1-gram histogram, warning=FALSE, cache=TRUE}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dplyr))
+
+total1gramOcc <- cbind(blogsNGrams$oneGram,source="Blogs") %>%
+rbind(cbind(newsNGrams$oneGram,source="News")) %>%
+rbind(cbind(twittNGrams$oneGram,source="Twitter"))
+
+ggplot(total1gramOcc, aes(occ)) +
+    geom_histogram(bins = 30, pad=TRUE) +
+    scale_y_log10()+
+    scale_x_log10()+
+    facet_grid(. ~ source)+
+    labs(x="Number of occurences",title="Distribution of word occurences")
 ```
 
-The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
+This can be further demonstrated by the following tables, that show that the top 10 popular words account for around 20\% of the total occurences. 
 
-```{r histogram}
-library(ggplot2)
-ggplot(blogsNGrams$oneGram, aes(occ)) +
-    geom_histogram(bins = 30, pad=TRUE) + 
-    scale_y_log10()+
-    scale_x_log10()
+```{r 1-gram top 10}
 
-ggplot(newsNGrams$oneGram, aes(occ)) +
-    geom_histogram(bins = 20) + 
-    scale_y_log10()+
-    scale_x_log10()
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
+top10 <- cbind(head(blogsNGrams$oneGram,n=10),source = "Blogs",total=blogsNGrams$nbWords)
+top10 <- rbind(top10,cbind(head(newsNGrams$oneGram,n=10),source= "News",total=newsNGrams$nbWords))
+top10 <- rbind(top10,cbind(head(twittNGrams$oneGram,n=10),source= "Twitter",total=twittNGrams$nbWords))
 
-ggplot(twittNGrams$oneGram, aes(occ)) +
-    geom_histogram(bins = 10) + 
-    scale_y_log10()+
-    scale_x_log10()
+#Calculate proportion of top10 words per data source
+sum10 <- top10 %>%
+    group_by(source,total) %>%
+    summarise(word="Sum top 10",occ=sum(occ)) %>%
+    select(word,occ,source,total) %>%
+    mutate(proportion=paste("(",round(occ*100/total,2),"%)")) %>%
+    unite("occurences",occ,proportion,sep=" ") %>%
+    select(occurences,source) %>%
+    spread(source,occurences)
+
+#Display top10 occurences and the sum
+top10 <- top10 %>%
+    mutate(proportion=paste("(",round(occ*100/total,2),"%)")) %>%
+    unite("occurences",occ,proportion,sep=" ") %>%
+    select(-total) %>%
+    spread(source,occurences)
+    
+kable(top10,caption="Top10 words per source")
+
+kable(sum10,caption="Total occurences for top 10 words")
 ```
+
 
 ## 2-gram analysis
 
-```{r 2gram analysis}
-kable(head(blogsNGrams$twoGram,n=10))
-kable(head(newsNGrams$twoGram,n=10))
-kable(head(twittNGrams$twoGram,n=10))
+We now do the same operation for 2-grams. While the distribution still follows a power law, the top 10 2-grams now only account for around 2\% of the occurences. This show that a larger proportion of 2-grams will be necessary to make 2-grams-based predictions useful.
+
+
+
+```{r 2-gram top 10}
+
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(tidyr))
+top10 <- cbind(head(blogsNGrams$twoGram,n=10),source = "Blogs",total=blogsNGrams$nbWords)
+top10 <- rbind(top10,cbind(head(newsNGrams$twoGram,n=10),source= "News",total=newsNGrams$nbWords))
+top10 <- rbind(top10,cbind(head(twittNGrams$twoGram,n=10),source= "Twitter",total=twittNGrams$nbWords))
+
+#Calculate proportion of top10 words per data source
+sum10 <- top10 %>%
+    group_by(source,total) %>%
+    summarise(word="Sum top 10",occ=sum(occ)) %>%
+    select(word,occ,source,total) %>%
+    mutate(proportion=paste("(",round(occ*100/total,2),"%)")) %>%
+    unite("occurences",occ,proportion,sep=" ") %>%
+    select(occurences,source) %>%
+    spread(source,occurences)
+
+#Display top10 occurences and the sum
+top10 <- top10 %>%
+    mutate(proportion=paste("(",round(occ*100/total,2),"%)")) %>%
+    unite("occurences",occ,proportion,sep=" ") %>%
+    select(-total) %>%
+    spread(source,occurences)
+    
+kable(top10,caption="Top10 words per source")
+
+kable(sum10,caption="Total occurences for top 10 words")
+```
+
+```{r 2-gram histogram, warning=FALSE, cache=TRUE}
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dplyr))
+
+total1gramOcc <- cbind(blogsNGrams$oneGram,source="Blogs") %>%
+rbind(cbind(newsNGrams$oneGram,source="News")) %>%
+rbind(cbind(twittNGrams$oneGram,source="Twitter"))
+
+ggplot(total1gramOcc, aes(occ)) +
+    geom_histogram(bins = 30, pad=TRUE) +
+    scale_y_log10()+
+    scale_x_log10()+
+    facet_grid(. ~ source)+
+    labs(x="Number of occurences",title="Distribution of word occurences")
 ```
 
 
@@ -222,7 +299,9 @@ kable(head(twittNGrams$twoGram,n=10))
 
 ## Using NLP tools
 
-This first step exploratory analysis gives us a good idea of the specificity of each dataset.For the final application, we will use NLP tools such as the tm package to perform sentence segmentation inside each line. We will remove stopwords but perform grammatical segmentation to provide predictions according to the proper construction of a sentence.
+This first step exploratory analysis gives us a good idea of the specificity of each dataset. We have shown that relatively few words (1-grams) are necessary to account for a large proportion of occurences in each dataset. However, the more we increase n in n-grams, the more examples are necessary. A good backoff strategy will therefore be necessary to enable good prediction with a reasonable, shiny.io compatible prediction model.
+
+For the final application, we will use NLP tools such as the tm package to perform sentence segmentation inside each line. This will allow us to find the most common first words using the full corpus. We will then be able to remove stopwords but perform grammatical segmentation to provide predictions according to the proper construction of a sentence.
 
 ## Dealing with limited resources
 
