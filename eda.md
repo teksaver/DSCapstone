@@ -1,15 +1,8 @@
----
-title: "Data Science Specialization report 1: Exploratory Data Analysis"
-author: "Sylvain Tenier"
-date: "June 12, 2016"
-output: 
-    html_document:
-      keep_md: true
----
+# Data Science Specialization report 1: Exploratory Data Analysis
+Sylvain Tenier  
+June 12, 2016  
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+
 
 # Executive summary
 
@@ -21,7 +14,8 @@ We analyse 3 files containing text in English from blogs, news and Twitter. We f
 
 We first check whether the dataset can fit in memory. Using the `readLines` function from a `connection` removes any *null characters* warnings and loads all the data without trouble.
 
-```{r file load, cache=TRUE}
+
+```r
 blogsConn <- file("./final/en_US/en_US.blogs.txt","r")
 newsConn <- file("./final/en_US/en_US.news.txt","r")
 twittConn <- file("./final/en_US/en_US.twitter.txt","r")
@@ -34,12 +28,14 @@ close(twittConn)
 ```
 
 During the analysis, tests were performed using a subset of the data using the `sample` function such as
-```{r eval=FALSE}
+
+```r
 blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
 ```
 However, the results presented here are generated from the full data set. This is reasonnable since the computations can be carried out on a nine-years old laptop (intel i3, 4GB RAM).
 
-```{r summary, cache=TRUE}
+
+```r
 library(knitr)
 summBlog <- as.character(summary(blogsLines))
 summNews <- as.character(summary(newsLines))
@@ -48,6 +44,17 @@ summDf <- data.frame(source="Blog",lines=summBlog[1],class=summBlog[2])
 summDf <-rbind(summDf,data.frame(source="News",lines=summNews[1],class=summNews[2]))
 summDf <-rbind(summDf,data.frame(source="Twitter",lines=summTwitt[1],class=summTwitt[2]))
 kable(summDf)
+```
+
+
+
+source    lines     class     
+--------  --------  ----------
+Blog      899288    character 
+News      1010242   character 
+Twitter   2360148   character 
+
+```r
 rm(summDf)
 ```
 
@@ -55,20 +62,27 @@ rm(summDf)
 
 We plot a histogram for the distribution of number of characters per line for each kind of data. We can see that blog and news data follow a normal distribution, while Twitter's 160 chararacters-per-message limit causes a strong bias towards that limit.
 
-```{r char distribution calculation, cache=TRUE}
+
+```r
 charCountDF <- data.frame(nbChar=integer(),source=factor(levels=c("Blog","News","Twitter")))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(blogsLines,nchar),source="Blog"))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(newsLines,nchar),source="News"))
 charCountDF <- rbind(charCountDF,data.frame(nbChar=sapply(twittLines,nchar),source="Twitter"))
 ```
 
-```{r char distribution histogram, cache=TRUE}
+
+```r
 suppressPackageStartupMessages(library(ggplot2))
 ggplot(data=charCountDF,aes(nbChar))+
     facet_grid(. ~ source)+
     geom_histogram(bins=30)+
     scale_x_log10() +
     labs(x="Number of characters",title="Number of characters per line")
+```
+
+![](eda_files/figure-html/char distribution histogram-1.png)<!-- -->
+
+```r
 rm(charCountDF)
 ```
 
@@ -76,7 +90,8 @@ rm(charCountDF)
 
 We first need to construct a function to generate a regular expression for profanity detection. We use the textfile provided at https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words/blob/master/en.
 
-```{r profanity regexp, cache=TRUE}
+
+```r
 prof <- scan("naughty.txt", what="", sep="\n")
 profExpr <- " ("
 for (item in prof){
@@ -94,7 +109,8 @@ We now create a `tokenize` function that :
 - removes extra whitespace,
 - splits all words and generic tokens by whitespace.
 
-```{r tokenizer function, cache=TRUE}
+
+```r
 tokenize <- function(line){
     #substitute all punctuation with space
     line <- gsub("[[:punct:]]"," ",line)
@@ -114,7 +130,8 @@ tokenize <- function(line){
 
 We then create a function to calculate the occurences for each word. The `ngramsOcc function uses a R environment to benefit from an efficient key-value (hash table) data structure.
 
-```{r ngrams function, cache=TRUE}
+
+```r
 library("data.table")
 ngramsOcc <- function(lines){
     # an environment is the most efficient hash table implementation in R
@@ -164,7 +181,8 @@ ngramsOcc <- function(lines){
 
 Using the function, we launch the calculation for each dataset. Since full calculations would take around 12 hours, we use a randomly drawn 10\% subset using the sample function, as seen in the inference class.
 
-```{r ngrams calculation, cache=TRUE}
+
+```r
 set.seed(12345)
 blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/10, replace=FALSE)]
 newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/10, replace=FALSE)]
@@ -181,13 +199,14 @@ rm(twittLines)
 
 The 1-gram occurence calculation provides the following results:
 
-- In the *Blogs* dataset, there are `r as.integer(blogsNGrams$nbWords)` occurences for `r nrow(blogsNGrams$oneGram)` distinct words.
-- In the *News* dataset, there are `r as.integer(newsNGrams$nbWords)` occurences for `r nrow(newsNGrams$oneGram)` distinct words.
-- In the *Twitter* dataset, there are `r as.integer(twittNGrams$nbWords)` occurences for `r nrow(twittNGrams$oneGram)` distinct words.
+- In the *Blogs* dataset, there are 4245568 occurences for 87301 distinct words.
+- In the *News* dataset, there are 4271207 occurences for 87446 distinct words.
+- In the *Twitter* dataset, there are 4427429 occurences for 87663 distinct words.
 
 We first generate and display and histogram of 1-grams (words) occurences. The following histogram shows that the resulting distribution is consistent with zipf's law (http://nlp.stanford.edu/IR-book/html/htmledition/zipfs-law-modeling-the-distribution-of-terms-1.html) for all datasets, i.e. the distribution of words follows a power law.
 
-```{r 1-gram histogram, warning=FALSE}
+
+```r
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
 
@@ -203,10 +222,12 @@ ggplot(total1gramOcc, aes(occ)) +
     labs(x="Number of occurences",title="Distribution of word occurences")
 ```
 
+![](eda_files/figure-html/1-gram histogram-1.png)<!-- -->
+
 This can be further demonstrated by the following tables, that show that the top 10 popular words account for around 20\% of the total occurences. 
 
-```{r 1-gram top 10}
 
+```r
 suppressPackageStartupMessages(library(knitr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
@@ -232,9 +253,37 @@ top10 <- top10 %>%
     spread(source,occurences)
     
 kable(top10,caption="Top10 words per source")
+```
 
+
+
+Table: Top10 words per source
+
+word   Blogs              News               Twitter          
+-----  -----------------  -----------------  -----------------
+a      90059 ( 2.12 %)    90230 ( 2.11 %)    90239 ( 2.04 %)  
+and    109417 ( 2.58 %)   109615 ( 2.57 %)   109947 ( 2.48 %) 
+i      90792 ( 2.14 %)    90875 ( 2.13 %)    91603 ( 2.07 %)  
+in     59613 ( 1.4 %)     59698 ( 1.4 %)     60214 ( 1.36 %)  
+is     42777 ( 1.01 %)    43201 ( 1.01 %)    NA               
+it     48042 ( 1.13 %)    48573 ( 1.14 %)    48733 ( 1.1 %)   
+NA     NA                 NA                 146199 ( 3.3 %)  
+of     87309 ( 2.06 %)    87895 ( 2.06 %)    88297 ( 1.99 %)  
+that   47891 ( 1.13 %)    48596 ( 1.14 %)    48509 ( 1.1 %)   
+the    185354 ( 4.37 %)   186419 ( 4.36 %)   187518 ( 4.24 %) 
+to     106202 ( 2.5 %)    107246 ( 2.51 %)   108362 ( 2.45 %) 
+
+```r
 kable(sum10,caption="Total occurences for top 10 words")
 ```
+
+
+
+Table: Total occurences for top 10 words
+
+Blogs               News                Twitter           
+------------------  ------------------  ------------------
+867456 ( 20.43 %)   872348 ( 20.42 %)   979621 ( 22.13 %) 
 
 
 ## 2-grams analysis
@@ -243,8 +292,8 @@ We now do the same operation for 2-grams. While the distribution still follows a
 
 
 
-```{r 2-gram top 10}
 
+```r
 suppressPackageStartupMessages(library(knitr))
 suppressPackageStartupMessages(library(dplyr))
 suppressPackageStartupMessages(library(tidyr))
@@ -270,11 +319,39 @@ top10 <- top10 %>%
     spread(source,occurences)
     
 kable(top10,caption="Top 10 2-grams per source")
+```
 
+
+
+Table: Top 10 2-grams per source
+
+2gram            Blogs             News              Twitter         
+---------------  ----------------  ----------------  ----------------
+and_i            5589 ( 0.13 %)    5632 ( 0.13 %)    5720 ( 0.13 %)  
+and_the          5625 ( 0.13 %)    5763 ( 0.13 %)    5910 ( 0.13 %)  
+for_the          5744 ( 0.14 %)    5871 ( 0.14 %)    5883 ( 0.13 %)  
+i_m              6739 ( 0.16 %)    6613 ( 0.15 %)    6733 ( 0.15 %)  
+in_the           15336 ( 0.36 %)   15336 ( 0.36 %)   15358 ( 0.35 %) 
+it_.profanity.   13126 ( 0.31 %)   13258 ( 0.31 %)   13478 ( 0.3 %)  
+of_the           18590 ( 0.44 %)   18574 ( 0.43 %)   18819 ( 0.43 %) 
+on_the           7289 ( 0.17 %)    7595 ( 0.18 %)    7478 ( 0.17 %)  
+to_be            6892 ( 0.16 %)    6944 ( 0.16 %)    6928 ( 0.16 %)  
+to_the           8524 ( 0.2 %)     8592 ( 0.2 %)     8602 ( 0.19 %)  
+
+```r
 kable(sum10,caption="Total occurences for top 10 2-grams")
 ```
 
-```{r 2-gram histogram, warning=FALSE, cache=TRUE}
+
+
+Table: Total occurences for top 10 2-grams
+
+Blogs            News             Twitter         
+---------------  ---------------  ----------------
+93454 ( 2.2 %)   94178 ( 2.2 %)   94909 ( 2.14 %) 
+
+
+```r
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(dplyr))
 
@@ -289,6 +366,8 @@ ggplot(total1gramOcc, aes(occ)) +
     facet_grid(. ~ source)+
     labs(x="Number of occurences",title="Distribution of 2-grams occurences")
 ```
+
+![](eda_files/figure-html/2-gram histogram-1.png)<!-- -->
 
 # Plans for the Shiny prediction app
 
