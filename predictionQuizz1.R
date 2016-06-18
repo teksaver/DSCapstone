@@ -3,6 +3,7 @@ set.seed(1979)
 
 # Full File loading
 
+
 #blogsCorpusFile <- textfile("./final/en_US/en_US.blogs.txt")
 #fullBlogsCorpus <- corpus(blogsCorpusFile)
 
@@ -19,12 +20,12 @@ close(newsConn)
 #close(twittConn)
 blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/500, replace=FALSE)]
 newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/500, replace=FALSE)]
-newsSubset <- newsSubset[!is.na(newsSubset)]
 
 #twittSubset <- blogsLines[sample(1:length(twittLines), length(twittLines)/500, replace=FALSE)]
 
 #sample corpus loading
-myCorpus <- corpus(newsSubset) #+ corpus(newsSubset)
+myCorpus <- corpus(blogsSubset[!is.na(blogsSubset)]) +
+    corpus(newsSubset[!is.na(newsSubset)])
 metadoc(myCorpus, "language") <- "english"
 summary(myCorpus, n = 5)
 
@@ -55,18 +56,15 @@ topfeatures(trigrams.dfm)
 
 #tests tidyr
 
-library(dplyr)
-library(tidyr)
-long.df <- as.data.frame(trigrams.dfm) %>%
-    gather("trigram","occurences") %>%
-    filter(occurences!=0)
-long.df <- data.frame(known = rep(long.df$trigram, long.df$occurences))
-long.df$y <- gsub("^.*\\_","", long.df$known )
-long.df$known <- gsub("\\_[^_]*$","",long.df$known)
+#library(dplyr)
+#library(tidyr)
+#long.df <- as.data.frame(trigrams.dfm) %>%
+#    gather("trigram","occurences") %>%
+#    filter(occurences!=0)
+#long.df <- data.frame(known = rep(long.df$trigram, long.df$occurences))
+#long.df$y <- gsub("^.*\\_","", long.df$known )
+#long.df$known <- gsub("\\_[^_]*$","",long.df$known)
 
-#training
-library(tree)
-tree.training <- tree(y~., long.df)
 
 testQuizz1 <- "The guy in front of me just bought a pound of bacon, a bouquet, and a case of"
 
@@ -79,3 +77,10 @@ testCorpusBigrams.dfm <- dfm(testCorpus, ngrams = 2, ignoredFeatures = c(profani
 
 topfeatures(testCorpusBigrams.dfm)
 as.data.frame(testCorpusBigrams.dfm)
+
+tofind <- which(grepl("case_of_",colnames(trigrams.dfm)))
+candidatesVector <-apply(trigrams.dfm[,tofind],2,sum)
+candidatesDf <- data.frame(pred=names(candidatesVector),n=candidatesVector)
+candidatesDf$pred <- gsub("^.*\\_","", candidatesDf$pred )
+#candidatesDf$x <- gsub("\\_[^_]*$","",candidatesDf$pred)
+candidatesDf[order(-candidatesDf$n),]$pred[1]
