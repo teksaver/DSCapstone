@@ -19,6 +19,8 @@ close(newsConn)
 #close(twittConn)
 blogsSubset <- blogsLines[sample(1:length(blogsLines), length(blogsLines)/500, replace=FALSE)]
 newsSubset <- blogsLines[sample(1:length(newsLines), length(newsLines)/500, replace=FALSE)]
+newsSubset <- newsSubset[!is.na(newsSubset)]
+
 #twittSubset <- blogsLines[sample(1:length(twittLines), length(twittLines)/500, replace=FALSE)]
 
 #sample corpus loading
@@ -37,8 +39,12 @@ topfeatures(unigrams.dfm)
 
 #create bigrams
 bigrams.dfm <- dfm(myCorpus, ngrams = 2, ignoredFeatures = c(profanity),
-                    removePunct = TRUE, removeNumbers = TRUE,
-                    removeTwitter = TRUE, removeSeparators = TRUE, removeHyphens = TRUE, stem = TRUE)
+                   removePunct = TRUE,
+                   removeNumbers = TRUE,
+                   removeTwitter = TRUE,
+                   removeSeparators = TRUE,
+                   removeHyphens = TRUE,
+                   stem = TRUE)
 topfeatures(bigrams.dfm)
 
 #create trigrams
