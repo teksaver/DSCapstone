@@ -1,4 +1,5 @@
 library(quanteda)
+set.seed(1979)
 
 # Full File loading
 
@@ -41,7 +42,25 @@ bigrams.dfm <- dfm(myCorpus, ngrams = 2, ignoredFeatures = c(profanity, stopword
 topfeatures(bigrams.dfm)
 
 #create trigrams
-trigrams.dfm <- dfm(myCorpus, ngrams = 1:3, ignoredFeatures = c(profanity, stopwords("english")),
+trigrams.dfm <- dfm(myCorpus, ngrams = 3, ignoredFeatures = c(profanity, stopwords("english")),
                    removePunct = TRUE, removeNumbers = TRUE,
                    removeTwitter = TRUE, removeSeparators = TRUE, removeHyphens = TRUE, stem = TRUE)
 topfeatures(trigrams.dfm)
+
+trigrams.df <- as.data.frame(trigrams.dfm)
+
+#tests tidyr
+
+library(dplyr)
+library(tidyr)
+long.df <- trigrams.df %>% gather("trigram","occurences") %>%
+    filter(occurences!=0)
+long.df <- data.frame(trigram = rep(long.df$trigram, long.df$occurences))
+long.df$x <- gsub("\\_[^_]*$","",long.df$trigram)
+long.df$y <- gsub("^.*\\_","", long.df$trigram )
+
+#training
+library(caret)
+model <- train(y ~x, data=long.df,
+                    method='rpart')
+
