@@ -9,12 +9,14 @@
 
 library(shiny)
 
+bigrams <- readRDS("data/bigrams.rds")
+
 get_n_max_from_ngram <-function(n,ngram,ngrams.env){
-    ngrams.env[[ngram]]
+    ngrams.env[[tolower(ngram)]]
 }
 
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
-  output$predicted <- renderText(get_n_max_from_ngram(input$words,"please",bigrams))
+  output$predicted <- renderText(get_n_max_from_ngram(input$nb_words,input$ngram,bigrams))
 })

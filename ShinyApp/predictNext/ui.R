@@ -18,17 +18,17 @@ shinyUI(fluidPage(
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
-       sliderInput("words",
+        textInput("ngram","E,ter your ngram: please separate words with underscores","Hello"),
+        sliderInput("nb_words",
                    "Number of words recommandations:",
                    min = 1,
                    max = 5,
-                   value = 3),
-       dataTableOutput('predict')
+                   value = 3)
     ),
 
     # Show a plot of the generated distribution
     mainPanel(
-       tableOutput("predicted")
+       textOutput("predicted")
     )
   )
 ))
