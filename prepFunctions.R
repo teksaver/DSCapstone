@@ -1,10 +1,6 @@
 library(data.table)
 
 trigrams <- fread("demi_trigrams.csv")
-tritest <- head(trigrams,n=1000)
-
-vals = strsplit(tritest$Content,split="_")
-
 
 trigrams.df <- trigrams %>%
     filter(grepl("^[[:alnum:]]*_[[:alnum:]]*_[[:alnum:]]*$",Content)) %>%
@@ -14,13 +10,6 @@ trigrams.df <- trigrams %>%
     group_by(ngram) %>%
     top_n(n = 5, wt = Frequency) %>%
     summarise( predict = toString(unique(predict)))
-
-
-grep("\\_[^_]*$", tritest[1]$Content,value=TRUE )
-
-
-candidatesDf$pred <- gsub("^.*\\_","", candidatesDf$pred )
-
 
 bigrams <- fread('ShinyApp/predictNext/bigrams_full.csv', header = T, sep = ',')
 bigrams.df <- bigrams %>%
@@ -59,4 +48,7 @@ get_n_max_from_ngram <-function(n,ngram,ngrams.env){
 }
 
 get_n_max_from_ngram(3,"hqsdello",bigrams.env)
+
+trigrams.df <- fread('trigrams.df.csv', header = T, sep = ',')
+trigrams.env <- create_env_ngrams(trigrams.df)
 
