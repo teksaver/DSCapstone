@@ -1,15 +1,32 @@
 library(data.table)
+library(dplyr)
+library(tidyr)
 
 trigrams <- fread("demi_trigrams.csv")
 
+create_env_ngrams <- function(df){
+    occur <- new.env()
+    for(i in 1:nrow(df)) {
+        occur[[df[i]$ngram]]=df[i]$predict
+    }
+    occur
+}
+
+
 trigrams.df <- trigrams %>%
+    filter(Frequency>3) %>%
     filter(grepl("^[[:alnum:]]*_[[:alnum:]]*_[[:alnum:]]*$",Content)) %>%
+    arrange(-Frequency) %>%
     separate(Content,into=c("w1","w2","predict"),sep="_") %>%
     unite(ngram,w1,w2)%>%
-    arrange(-Frequency) %>%
     group_by(ngram) %>%
     top_n(n = 5, wt = Frequency) %>%
     summarise( predict = toString(unique(predict)))
+
+trigrams.env <- create_env_ngrams(trigrams.df)
+
+saveRDS(trigrams.env, "ShinyApp/predictNext/data/trigrams.env.rds")
+
 
 bigrams <- fread('ShinyApp/predictNext/bigrams_full.csv', header = T, sep = ',')
 bigrams.df <- bigrams %>%
@@ -20,13 +37,7 @@ bigrams.df <- bigrams %>%
     top_n(n = 5, wt = Frequency) %>%
     summarise( predict = toString(unique(predict)))
 
-create_env_ngrams <- function(df){
-    occur <- new.env()
-    for(i in 1:nrow(df)) {
-        occur[[df[i]$ngram]]=df[i]$predict
-    }
-    occur
-}
+
 
 bigrams.env <- create_env_ngrams(bigrams.df)
 
