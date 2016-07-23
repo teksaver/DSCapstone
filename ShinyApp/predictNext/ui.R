@@ -13,12 +13,12 @@ library(shiny)
 shinyUI(fluidPage(
 
   # Application title
-  titlePanel("Old Faithful Geyser Data"),
+  titlePanel("Will's predicube"),
 
   # Sidebar with a slider input for number of bins
   sidebarLayout(
     sidebarPanel(
-        textInput("ngram","E,ter your ngram: please separate words with underscores","Hello"),
+        textInput("ngram","Please enter your phrase here:","Hello"),
         sliderInput("nb_words",
                    "Number of words recommandations:",
                    min = 1,
@@ -28,7 +28,14 @@ shinyUI(fluidPage(
 
     # Show a plot of the generated distribution
     mainPanel(
-       textOutput("predicted")
+        h2("Welcome"),
+        p("Welcome ! I'm Will, and I will predict your will. Please wait until the first prediction appears for the \"Hello\" phrase. Then please input your own phrase inside the text box on the side bar, and enjoy! you can ajust the number of predicted words using the slider."),
+        code("Please note that the initial loading time only appears if shiny.io has unloaded the app. If the app is already running, you should get instant results!"),
+        h2("Your prediction table"),
+            wellPanel(
+                tableOutput("predicted")
+            )
+        )
     )
   )
-))
+)

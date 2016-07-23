@@ -38,6 +38,20 @@ want <- get_n_max_from_ngram(5,"please",bigrams.env)
 
 bigrams.env <- readRDS("bigrams.env.RDS")
 
+
+
+get_n_max_from_ngram(3,"hqsdello",bigrams.env)
+
+trigrams.df <- fread('trigrams.df.csv', header = T, sep = ',')
+trigrams.env <- create_env_ngrams(trigrams.df)
+trigrams.multiple.df <- trigrams.df %>% filter(grepl(",",predict))
+
+
+# prediction function
+
+bigrams <- readRDS("ShinyApp/predictNext/data/bigrams.env.rds")
+trigrams <- readRDS("ShinyApp/predictNext/data/trigrams.env.rds")
+
 get_n_max_from_ngram <-function(n,ngram,ngrams.env){
     liste <- ngrams.env[[tolower(ngram)]]
     if (is.null(liste)){
@@ -46,9 +60,71 @@ get_n_max_from_ngram <-function(n,ngram,ngrams.env){
     mots <- strsplit(liste,',')[[1]]
     return(list(mots=mots,nb=length(mots)))
 }
+library(quanteda)
+profanity <- scan("naughty.txt", what="", sep="\n")
 
-get_n_max_from_ngram(3,"hqsdello",bigrams.env)
+create_prediction_table <- function(n, phrase){
+    res=data.frame(prediction=character(),rating=integer())
+    # get prediction for 2gram
+    phrase.dfm <- dfm(phrase,
+                  ngrams = 2,
+                  stem = FALSE,
+                  ignoredFeatures = c(profanity),
+                  removePunct = TRUE,
+                  removeNumbers = TRUE,
+                  removeTwitter = TRUE,
+                  removeSeparators = TRUE,
+                  removeHyphens = TRUE)
 
-trigrams.df <- fread('trigrams.df.csv', header = T, sep = ',')
-trigrams.env <- create_env_ngrams(trigrams.df)
+    if (!is.null(phrase.dfm)){# we have a 2gram
+        tokens <- data.frame(Content = features(phrase.dfm), row.names = NULL, stringsAsFactors = FALSE)
+        ngram <- tokens[nrow(tokens),]
+        i=0
+
+        for (mot in get_n_max_from_ngram(n,ngram,trigrams)$mots){
+            print (mot)
+            res <- rbind(res,data.frame(prediction=mot,rating=3))
+            i=i+1
+            if(i==n){
+                return(res)
+            }
+        }
+
+        # if not enough words, deal with last word
+        word.dfm <- dfm(phrase,
+                          ngrams = 1,
+                          stem = FALSE,
+                          ignoredFeatures = c(profanity),
+                          removePunct = TRUE,
+                          removeNumbers = TRUE,
+                          removeTwitter = TRUE,
+                          removeSeparators = TRUE,
+                          removeHyphens = TRUE)
+
+        if (!is.null(word.dfm)){# we have a word list
+            tokens <- data.frame(Content = features(word.dfm), row.names = NULL, stringsAsFactors = FALSE)
+            ngram <- tokens[nrow(tokens),]
+            print(paste("décomposition : ",ngram))
+            i=0
+
+            for (mot in get_n_max_from_ngram(n,ngram,bigrams)$mots){
+                print (mot)
+                res <- rbind(res,data.frame(prediction=mot,rating=2))
+                i=i+1
+                if(i==n){
+                    return(res)
+                }
+            }
+        }
+
+    }
+    #if we arrive here, the results are not complete!!
+    res <- rbind(res,data.frame(prediction="will",rating=1))
+    res
+
+}
+
+create_prediction_table(5,"i want to eat")
+
+
 
